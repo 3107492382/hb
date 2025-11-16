@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>生日快乐 ♥</title>
+<style>
+  html,body{
+    height:100%;margin:0;overflow:hidden;
+    font-family:"微软雅黑",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% 45%, rgba(255,255,255,.65), rgba(255,255,255,0) 60%),
+      radial-gradient(circle at 50% 45%, #fff4f7 0%, #c9eaff 100%);
+  }
+  .stage{position:relative;width:100%;height:100%;}
+  .msg{
+    position:absolute;left:50%;top:50%;
+    padding:10px 16px;border-radius:16px;
+    color:#fff;font-weight:700;
+    font-size:clamp(14px,3vmin,22px);
+    text-shadow:0 2px 8px rgba(0,0,0,.28);
+    opacity:0;
+    transform:
+      translate(-50%,-50%) translate(var(--dx),var(--dy)) scale(.75) rotate(var(--rot));
+    animation: flight var(--dur) cubic-bezier(.25,.7,.3,1) var(--delay) both;
+    box-shadow:0 8px 26px rgba(0,0,0,.22);
+    will-change: transform, opacity;
+    background: var(--bg);
+  }
+
+  @keyframes flight{
+    0%{
+      opacity:0;
+      transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) scale(.75) rotate(var(--rot));
+    }
+    18%{ opacity:1; }
+    45%{
+      transform:translate(-50%,-50%) translate(calc(var(--dx)*.2),calc(var(--dy)*.2)) scale(1.06);
+    }
+    70%{
+      transform:translate(-50%,-50%) translate(calc(var(--dx)*1.15),calc(var(--dy)*1.15)) scale(.95) rotate(var(--rot));
+    }
+    88%{
+      transform:translate(-50%,-50%) translate(calc(var(--heart-x)*.6),calc(var(--heart-y)*.6)) scale(.9) rotate(var(--heart-rot));
+    }
+    100%{
+      opacity:1;
+      transform:translate(-50%,-50%) translate(var(--heart-x),var(--heart-y)) scale(1) rotate(var(--heart-rot));
+    }
+  }
+
+  .msg::before,.msg::after{
+    content:'';
+    position:absolute;left:50%;top:0;
+    background:inherit;border-radius:50px 50px 0 0;
+    width:22px;height:34px;opacity:0;transition:opacity .28s ease;
+    transform-origin:0 100%;transform:rotate(-45deg);
+  }
+  .msg::after{ left:0;transform-origin:100% 100%;transform:rotate(45deg); }
+  .msg.heart-mode{ color:transparent; text-shadow:none; }
+  .msg.heart-mode::before,.msg.heart-mode::after{ opacity:1; }
+
+  .msg.locked{
+    animation:none;
+    transform:translate(-50%,-50%) translate(var(--heart-x),var(--heart-y)) scale(1) rotate(var(--heart-rot));
+    opacity:1;
+  }
+  .msg.locked.pulse{
+    animation:pulse 2.2s ease-in-out 1;
+  }
+  @keyframes pulse{
+    0%,100%{ transform:translate(-50%,-50%) translate(var(--heart-x),var(--heart-y)) scale(1); }
+    50%   { transform:translate(-50%,-50%) translate(var(--heart-x),var(--heart-y)) scale(1.08); }
+  }
+
+  .msg.burst{
+    animation: burst 1.4s cubic-bezier(.17,.6,.2,1) forwards;
+  }
+  @keyframes burst{
+    0%{
+      opacity:1;
+      transform:translate(-50%,-50%) translate(var(--heart-x),var(--heart-y)) scale(1);
+      filter:blur(0);
+    }
+    70%{
+      opacity:.9;
+      transform:
+        translate(-50%,-50%)
+        translate(calc(var(--heart-x) + var(--bx)*0.7), calc(var(--heart-y) + var(--by)*0.7))
+        scale(.9) rotate(var(--rot));
+      filter:blur(.3px);
+    }
+    100%{
+      opacity:0;
+      transform:
+        translate(-50%,-50%)
+        translate(calc(var(--heart-x) + var(--bx)), calc(var(--heart-y) + var(--by)))
+        scale(.7) rotate(var(--rot));
+      filter:blur(1px);
+    }
+  }
+
+  .center-title{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    font-weight:800;letter-spacing:.12em;
+    font-size:clamp(18px,4vmin,28px);
+    color:rgba(255,105,180,.6);
+    text-shadow:0 2px 10px rgba(255,105,180,.15);
+    opacity:.0; pointer-events:none;
+    animation:titleIn 1.2s ease 0.8s both;
+  }
+  @keyframes titleIn{
+    from{opacity:0; transform:translate(-50%,-55%);}
+    to  {opacity:.95; transform:translate(-50%,-50%);}
+  }
+  .center-title.grow{
+    animation:titleIn 1.2s ease 0.8s both,
+               titleGrow 3s ease-out 0s forwards;
+  }
+  @keyframes titleGrow{
+    0%{
+      transform:translate(-50%,-50%) scale(1);
+      opacity:.95;
+    }
+    100%{
+      transform:translate(-50%,-50%) scale(1.8);
+      opacity:.95;
+    }
+  }
+
+  .replay{
+    position:absolute;right:18px;bottom:18px;
+    padding:10px 14px;border:none;border-radius:10px;
+    background:rgba(255,255,255,.5);
+    backdrop-filter:blur(8px);
+    color:#222;font-weight:600;cursor:pointer;
+    box-shadow:0 5px 20px rgba(0,0,0,.22);
+  }
+
+  /* 新增：初始验证表单层 */
+  .init-prompt {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(10px);
+  }
+  .init-prompt.hidden {
+    display: none;
+  }
+  
+  .form-container {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    min-width: 300px;
+    max-width: 400px;
+    width: 90%;
+  }
+  
+  .form-title {
+    color: #ff6b9d;
+    font-size: clamp(24px, 5vmin, 32px);
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+  }
+  
+  .form-group input:focus {
+    outline: none;
+    border-color: #ff6b9d;
+  }
+  
+  .form-group input::placeholder {
+    color: #999;
+  }
+  
+  .error-message {
+    color: #e15554;
+    font-size: 14px;
+    margin-top: 8px;
+    display: none;
+  }
+  
+  .error-message.show {
+    display: block;
+    animation: shake 0.5s;
+  }
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+  
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #ff6b9d, #ffc93c);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-top: 10px;
+  }
+  
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255, 107, 157, 0.4);
+  }
+  
+  .submit-btn:active {
+    transform: translateY(0);
+  }
+
+  /* 烟花和彩带特效容器 */
+  .fireworks-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* 烟花粒子 */
+  .firework-particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 10px currentColor;
+  }
+
+  /* 烟花发射轨迹 */
+  .firework-rocket {
+    position: absolute;
+    width: 5px;
+    height: 12px;
+    background: linear-gradient(to top, #ff6b9d, #fff);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    pointer-events: none;
+    box-shadow: 0 0 15px rgba(255, 107, 157, 0.8);
+  }
+
+  /* 彩带 */
+  .confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+  }
+
+  /* 彩带飘落动画 */
+  @keyframes confettiFall {
+    0% {
+      transform: translateY(-100vh) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(720deg);
+      opacity: 0.8;
+    }
+  }
+
+  .confetti.animate {
+    animation: confettiFall linear forwards;
+  }
+
+  /* 烟花爆炸动画 */
+  @keyframes fireworkExplode {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) scale(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translate(calc(var(--vx) * 0.3), calc(var(--vy) * 0.3)) scale(0.8);
+    }
+    60% {
+      opacity: 1;
+      transform: translate(calc(var(--vx) * 0.7), calc(var(--vy) * 0.7)) scale(1.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--vx), var(--vy)) scale(1);
+    }
+  }
+
+  .firework-particle.explode {
+    animation: fireworkExplode 2s ease-out forwards;
+  }
+
+  /* 烟花发射动画 */
+  @keyframes fireworkLaunch {
+    0% {
+      transform: translateY(100vh) translateX(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(var(--target-y)) translateX(var(--target-x));
+      opacity: 1;
+    }
+  }
+
+  .firework-rocket.launch {
+    animation: fireworkLaunch linear forwards;
+  }
+</style>
+</head>
+<body>
+  <!-- 新增：初始验证表单层 -->
+  <div class="init-prompt" id="initPrompt">
+    <div class="form-container">
+      <div class="form-title">请输入信息 ♥</div>
+      <form id="authForm">
+        <div class="form-group">
+          <label for="nameInput">姓名：</label>
+          <input type="text" id="nameInput" placeholder="请输入姓名" required>
+          <div class="error-message" id="nameError"></div>
+        </div>
+        <div class="form-group">
+          <label for="birthdayInput">生日：</label>
+          <input type="text" id="birthdayInput" placeholder="XX月XX日（例如：1月1日）" required>
+          <div class="error-message" id="birthdayError"></div>
+        </div>
+        <button type="submit" class="submit-btn">提交</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="center-title" id="title">Happy Birthday To 陈秘华♥</div>
+  </div>
+  <div class="fireworks-container" id="fireworksContainer"></div>
+  <button class="replay" id="replay">重放</button>
+
+<script>
+const tips = [
+  '愿你生日快乐如风轻柔','愿好运陪你闯关上岸','新岁明亮如你','愿你心想事成一路通关',
+  '愿生活因你更温柔','愿努力都有回应','生日的光落在你身上','愿上岸的消息向你奔来',
+  '愿你永远闪闪发光','愿梦想都不再遥远','未来都为你展开','愿你的才华被看见',
+  '愿你笑容比星河亮','愿公考面试都顺利','愿你被这个世界温柔以待','愿你上岸如期而至',
+  '愿你所有期盼都成真','愿压力都化作好运','愿你生日愿望逐一实现','愿你笔试面试都高分',
+  '愿你被爱也有力量','愿你的人生多一点甜','愿你每一步都坚定自信','愿你备考不枉苦心',
+  '愿你每天都值得庆祝','愿好消息常来拜访','愿你的生日温暖如春','愿你的努力开花结果',
+  '愿你接住生活的所有惊喜','愿你未来比今天更闪亮','愿好运绕着你打转','愿上岸成为你的日常',
+  '愿你的心愿被温柔接住','愿你眼里永远有光','愿你生日如愿以偿','愿你的名字出现在录取名单',
+  '愿生活善待你','愿心中的山都能翻过去','愿你笑容常在','愿你成为最闪亮的上岸人'
+];
+
+const stage  = document.getElementById('stage');
+const replay = document.getElementById('replay');
+const title  = document.getElementById('title');
+const initPrompt = document.getElementById('initPrompt'); // 初始提示层
+const fireworksContainer = document.getElementById('fireworksContainer');
+
+const directions = [
+  {dx:'0vw',dy:'-80vh'},{dx:'0vw',dy:'80vh'},
+  {dx:'-80vw',dy:'0vh'},{dx:'80vw',dy:'0vh'},
+  {dx:'-70vw',dy:'-70vh'},{dx:'70vw',dy:'-70vh'},
+  {dx:'-70vw',dy:'70vh'},{dx:'70vw',dy:'70vh'},
+  {dx:'0vw',dy:'-60vh'},{dx:'0vw',dy:'60vh'},
+  {dx:'-60vw',dy:'0vh'},{dx:'60vw',dy:'0vh'}
+];
+
+function rand(min,max){return Math.random()*(max-min)+min;}
+function randomGradient(){
+  const arr=[
+    ['#ff758c','#ff7eb3'], ['#a18cd1','#fbc2eb'],
+    ['#f6d365','#fda085'], ['#84fab0','#8fd3f4'],
+    ['#f093fb','#f5576c'], ['#4facfe','#00f2fe'],
+    ['#43e97b','#38f9d7'], ['#fa709a','#fee140'],
+    ['#30cfd0','#330867'], ['#5ee7df','#b490ca']
+  ];
+  const [c1,c2]=arr[Math.floor(Math.random()*arr.length)];
+  return `linear-gradient(135deg,${c1},${c2})`;
+}
+
+function heartXY(t){
+  const s = 16;
+  const x = s * (16 * Math.sin(t)**3);
+  const y = -s * (13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t));
+  return {x: x+'px', y: y+'px'};
+}
+
+function createMsg(i,total){
+  const el = document.createElement('div');
+  el.className = 'msg';
+
+  const d = directions[Math.floor(Math.random()*directions.length)];
+  el.style.setProperty('--dx', d.dx);
+  el.style.setProperty('--dy', d.dy);
+  el.style.setProperty('--rot', rand(-55,55)+'deg');
+  el.style.setProperty('--dur', (rand(6.8,8.6))+'s');
+  el.style.setProperty('--delay', (i*0.11 + rand(0,0.35))+'s');
+  el.style.setProperty('--bg', randomGradient());
+
+  const t = (i / total) * Math.PI * 2;
+  const {x,y} = heartXY(t);
+  el.style.setProperty('--heart-x', x);
+  el.style.setProperty('--heart-y', y);
+  el.style.setProperty('--heart-rot', rand(-18,18)+'deg');
+
+  const span = document.createElement('span');
+  span.className = 'text';
+  span.textContent = tips[Math.floor(Math.random()*tips.length)];
+  el.appendChild(span);
+
+  const delay = parseFloat(el.style.getPropertyValue('--delay'));
+  const dur   = parseFloat(el.style.getPropertyValue('--dur'));
+  const switchAt = delay + dur * 0.86;
+  const switchTimer = setTimeout(()=>{ el.classList.add('heart-mode'); }, switchAt*1000);
+
+  el.addEventListener('animationend',()=>{
+    clearTimeout(switchTimer);
+    el.classList.add('heart-mode','locked','pulse');
+
+    const spread = rand(140, 260);
+    const ang    = rand(0, Math.PI*2);
+    const bx = Math.cos(ang)*spread;
+    const by = Math.sin(ang)*spread;
+    el.style.setProperty('--bx', bx+'px');
+    el.style.setProperty('--by', by+'px');
+  }, {once:true});
+
+  stage.appendChild(el);
+}
+
+function finalBurst(){
+  stage.querySelectorAll('.msg.locked').forEach(el=>{
+    el.classList.remove('pulse');
+    const jitter = rand(0, 200);
+    setTimeout(()=> el.classList.add('burst'), jitter);
+    el.addEventListener('animationend',()=> el.remove(), {once:true});
+  });
+}
+
+// 烟花和彩带特效
+let fireworksInterval;
+let confettiInterval;
+let isFireworksActive = false;
+
+const fireworkColors = [
+  '#ff6b9d', '#ffc93c', '#6bcf7f', '#4d9de0', '#e15554',
+  '#fabc2a', '#9d4edd', '#ff006e', '#00bbf9', '#ffbe0b'
+];
+
+function createFirework(x, y) {
+  // 创建发射轨迹
+  const rocket = document.createElement('div');
+  rocket.className = 'firework-rocket';
+  rocket.style.left = x + 'px';
+  rocket.style.bottom = '0px';
+  
+  const distance = Math.sqrt(Math.pow(x - window.innerWidth/2, 2) + Math.pow(y - window.innerHeight, 2));
+  
+  rocket.style.setProperty('--target-x', '0px');
+  rocket.style.setProperty('--target-y', (window.innerHeight - y) + 'px');
+  
+  const duration = Math.sqrt(distance) * 0.018;
+  rocket.style.animationDuration = duration + 's';
+  rocket.classList.add('launch');
+  
+  fireworksContainer.appendChild(rocket);
+  
+  // 在到达目标位置时爆炸
+  setTimeout(() => {
+    if (rocket.parentNode) {
+      rocket.remove();
+    }
+    explodeFirework(x, y);
+  }, duration * 1000);
+}
+
+function explodeFirework(x, y) {
+  const particleCount = 50; // 增加粒子数量
+  const color = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
+  
+  // 创建多个爆炸圈层
+  for (let layer = 0; layer < 2; layer++) {
+    for (let i = 0; i < particleCount; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'firework-particle';
+      particle.style.backgroundColor = color;
+      particle.style.left = x + 'px';
+      particle.style.top = y + 'px';
+      
+      const angle = (Math.PI * 2 * i) / particleCount + (layer * Math.PI / particleCount);
+      const velocity = rand(100, 250) + (layer * 50); // 增加速度和分层
+      const vx = Math.cos(angle) * velocity;
+      const vy = Math.sin(angle) * velocity;
+      
+      particle.style.setProperty('--vx', vx + 'px');
+      particle.style.setProperty('--vy', vy + 'px');
+      
+      particle.classList.add('explode');
+      
+      fireworksContainer.appendChild(particle);
+      
+      // 清理粒子
+      setTimeout(() => {
+        if (particle.parentNode) {
+          particle.remove();
+        }
+      }, 2000);
+    }
+  }
+}
+
+function createConfetti() {
+  const confetti = document.createElement('div');
+  confetti.className = 'confetti';
+  
+  const colors = ['#ff6b9d', '#ffc93c', '#6bcf7f', '#4d9de0', '#e15554', '#fabc2a', '#9d4edd'];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  confetti.style.backgroundColor = color;
+  
+  const size = rand(6, 12);
+  confetti.style.width = size + 'px';
+  confetti.style.height = size + 'px';
+  
+  const left = rand(0, window.innerWidth);
+  confetti.style.left = left + 'px';
+  confetti.style.top = '-10px';
+  
+  const duration = rand(3, 6);
+  confetti.style.animationDuration = duration + 's';
+  confetti.style.animationDelay = rand(0, 2) + 's';
+  
+  // 添加旋转
+  confetti.style.transform = `rotate(${rand(0, 360)}deg)`;
+  
+  confetti.classList.add('animate');
+  fireworksContainer.appendChild(confetti);
+  
+  // 清理彩带
+  setTimeout(() => {
+    if (confetti.parentNode) {
+      confetti.remove();
+    }
+  }, (duration + 2) * 1000);
+}
+
+function startFireworks() {
+  if (isFireworksActive) return;
+  isFireworksActive = true;
+  
+  // 每隔一段时间发射烟花 - 增加频率和数量
+  fireworksInterval = setInterval(() => {
+    if (!isFireworksActive) return;
+    
+    // 一次发射更多烟花
+    const fireworkCount = rand(2, 5); // 增加烟花数量
+    for (let i = 0; i < fireworkCount; i++) {
+      setTimeout(() => {
+        const x = rand(100, window.innerWidth - 100);
+        const y = rand(100, window.innerHeight * 0.6);
+        createFirework(x, y);
+      }, i * 200); // 缩短间隔时间
+    }
+  }, 500); // 缩短发射间隔
+  
+  // 持续创建彩带 - 增加频率
+  confettiInterval = setInterval(() => {
+    if (!isFireworksActive) return;
+    createConfetti();
+    // 一次创建多个彩带
+    setTimeout(() => createConfetti(), 100);
+  }, 150); // 增加彩带频率
+}
+
+function stopFireworks() {
+  isFireworksActive = false;
+  if (fireworksInterval) {
+    clearInterval(fireworksInterval);
+    fireworksInterval = null;
+  }
+  if (confettiInterval) {
+    clearInterval(confettiInterval);
+    confettiInterval = null;
+  }
+  // 清除所有特效元素
+  fireworksContainer.innerHTML = '';
+}
+
+// 音乐相关
+let audioContext;
+let isPlaying = false;
+let startTime;
+let currentNoteIndex = 0;
+
+// 生日快乐歌旋律
+// 格式：[频率(Hz), 时长(秒), 音量]
+const melody = [
+  // Happy Birthday to you
+  [261.63, 0.25, 0.4], // C4 - "Hap"
+  [261.63, 0.25, 0.4], // C4 - "py"
+  [293.66, 0.5, 0.4],  // D4 - "Birth"
+  [261.63, 0.5, 0.4],  // C4 - "day"
+  [349.23, 0.5, 0.4],  // F4 - "to"
+  [329.63, 1.0, 0.4],  // E4 - "you" (长音)
+  
+  // Happy Birthday to you
+  [261.63, 0.25, 0.4], // C4 - "Hap"
+  [261.63, 0.25, 0.4], // C4 - "py"
+  [293.66, 0.5, 0.4],  // D4 - "Birth"
+  [261.63, 0.5, 0.4],  // C4 - "day"
+  [392.00, 0.5, 0.4],  // G4 - "to"
+  [349.23, 1.0, 0.4],  // F4 - "you" (长音)
+  
+  // Happy Birthday dear...
+  [261.63, 0.25, 0.4], // C4 - "Hap"
+  [261.63, 0.25, 0.4], // C4 - "py"
+  [523.25, 0.5, 0.4],  // C5 - "Birth"
+  [440.00, 0.5, 0.4],  // A4 - "day"
+  [349.23, 0.5, 0.4],  // F4 - "dear"
+  [329.63, 0.5, 0.4],  // E4 - "..."
+  [293.66, 1.0, 0.4],  // D4 - (长音)
+  
+  // Happy Birthday to you
+  [466.16, 0.25, 0.4], // Bb4 - "Hap"
+  [466.16, 0.25, 0.4], // Bb4 - "py"
+  [440.00, 0.5, 0.4],  // A4 - "Birth"
+  [349.23, 0.5, 0.4],  // F4 - "day"
+  [392.00, 0.5, 0.4],  // G4 - "to"
+  [349.23, 1.5, 0.4]   // F4 - "you" (长音，结束)
+];
+
+const totalMelodyDuration = melody.reduce((total, [, duration]) => total + duration, 0);
+
+function initAudio() {
+  if (!audioContext) {
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioContext();
+  }
+  return audioContext;
+}
+
+function playTone(frequency, duration, volume) {
+  const ctx = initAudio();
+  
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+  
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+  
+  gainNode.gain.setValueAtTime(0, ctx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.05);
+  gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + duration - 0.05);
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.start();
+  oscillator.stop(ctx.currentTime + duration);
+  
+  return duration;
+}
+
+function playMelody() {
+  if (!isPlaying) return;
+  
+  const ctx = initAudio();
+  const now = ctx.currentTime - startTime;
+  const loopTime = now % totalMelodyDuration;
+  let totalDuration = 0;
+  let nextNoteIndex = -1;
+  
+  for (let i = 0; i < melody.length; i++) {
+    const [, duration] = melody[i];
+    if (loopTime >= totalDuration && loopTime < totalDuration + duration) {
+      nextNoteIndex = i;
+      break;
+    } else if (loopTime >= totalDuration + duration && loopTime < totalDuration + duration + 0.05) {
+      nextNoteIndex = (i + 1) % melody.length;
+      break;
+    }
+    totalDuration += duration;
+  }
+  
+  if (nextNoteIndex === -1) {
+    nextNoteIndex = 0;
+  }
+  
+  if (nextNoteIndex !== currentNoteIndex && nextNoteIndex >= 0) {
+    const [freq, duration, volume] = melody[nextNoteIndex];
+    currentNoteIndex = nextNoteIndex;
+    playTone(freq, duration, volume);
+  }
+  
+  requestAnimationFrame(playMelody);
+}
+
+function startMusic() {
+  if (isPlaying) return;
+  
+  const ctx = initAudio();
+  
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(() => {
+      isPlaying = true;
+      startTime = ctx.currentTime;
+      currentNoteIndex = -1;
+      playMelody();
+    });
+  } else {
+    isPlaying = true;
+    startTime = ctx.currentTime;
+    currentNoteIndex = -1;
+    playMelody();
+  }
+}
+
+function stopMusic() {
+  isPlaying = false;
+  currentNoteIndex = 0;
+}
+
+function play(){
+  stage.querySelectorAll('.msg').forEach(n=>n.remove());
+  title.style.opacity = 0;
+  title.classList.remove('grow'); // 重置放大动画
+  stopFireworks(); // 停止之前的特效
+  
+  stopMusic();
+  startMusic();
+
+  const TOTAL = 220;
+  for(let i=0;i<TOTAL;i++) createMsg(i,TOTAL);
+
+  setTimeout(()=>{ title.style.opacity = 1; }, 1400);
+
+  // 计算爱心形成时间：最后一个气泡的延迟 + 持续时间 + 脉冲时间
+  // 最后一个气泡延迟：220*0.11 + 0.35 ≈ 24.55s
+  // 最大持续时间：8.6s
+  // 脉冲时间：2.2s
+  // 爱心形成时间：24.55 + 8.6 + 2.2 = 35.35s
+  // 停留1秒后开始放大"for you"并让气泡消散，同时启动烟花特效
+  const HEART_FORMATION_TIME = ((TOTAL - 1) * 0.11 + 0.35 + 8.6 + 2.2) * 1000;
+  const STAY_TIME = 1000; // 停留1秒
+  setTimeout(()=>{
+    title.classList.add('grow'); // 让"for you"开始放大
+    finalBurst(); // 开始让气泡消散
+    startFireworks(); // 启动烟花和彩带特效
+  }, HEART_FORMATION_TIME + STAY_TIME);
+}
+
+// 表单验证逻辑
+const authForm = document.getElementById('authForm');
+const nameInput = document.getElementById('nameInput');
+const birthdayInput = document.getElementById('birthdayInput');
+const nameError = document.getElementById('nameError');
+const birthdayError = document.getElementById('birthdayError');
+
+// 正确答案
+const correctName = '陈秘华';
+const correctBirthday = '11月17日';
+
+authForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  
+  // 清除之前的错误信息
+  nameError.classList.remove('show');
+  birthdayError.classList.remove('show');
+  nameError.textContent = '';
+  birthdayError.textContent = '';
+  
+  const name = nameInput.value.trim();
+  const birthday = birthdayInput.value.trim();
+  
+  let isValid = true;
+  
+  // 验证姓名
+  if (name !== correctName) {
+    nameError.textContent = '姓名输入错误！';
+    nameError.classList.add('show');
+    nameInput.style.borderColor = '#e15554';
+    isValid = false;
+  } else {
+    nameInput.style.borderColor = '#6bcf7f';
+  }
+  
+  // 验证生日格式和内容
+  const birthdayPattern = /^\d{1,2}月\d{1,2}日$/;
+  if (!birthdayPattern.test(birthday)) {
+    birthdayError.textContent = '格式错误！请输入XX月XX日格式（例如：1月1日）';
+    birthdayError.classList.add('show');
+    birthdayInput.style.borderColor = '#e15554';
+    isValid = false;
+  } else if (birthday !== correctBirthday) {
+    birthdayError.textContent = '生日输入错误！';
+    birthdayError.classList.add('show');
+    birthdayInput.style.borderColor = '#e15554';
+    isValid = false;
+  } else {
+    birthdayInput.style.borderColor = '#6bcf7f';
+  }
+  
+  // 如果验证通过，隐藏表单并开始播放
+  if (isValid) {
+    initPrompt.classList.add('hidden');
+    play();
+  }
+});
+
+// 输入时清除错误样式
+nameInput.addEventListener('input', () => {
+  nameError.classList.remove('show');
+  nameInput.style.borderColor = '#e0e0e0';
+});
+
+birthdayInput.addEventListener('input', () => {
+  birthdayError.classList.remove('show');
+  birthdayInput.style.borderColor = '#e0e0e0';
+});
+
+replay.onclick = play;
+</script>
+</body>
+</html>
